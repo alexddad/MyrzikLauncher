@@ -4,14 +4,18 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.murzik.voidlauncher.data.AppRepository
+import com.murzik.voidlauncher.data.ClockStyle
 import com.murzik.voidlauncher.data.LauncherPreferences
 import com.murzik.voidlauncher.data.PreferencesManager
+import com.murzik.voidlauncher.data.SystemManager
 import com.murzik.voidlauncher.model.AppInfo
 import com.murzik.voidlauncher.receiver.PackageChangeReceiver
+import com.murzik.voidlauncher.util.MathEvaluator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -19,13 +23,17 @@ enum class Screen {
     HOME,
     DRAWER,
     SETTINGS,
-    HIDDEN_APPS
+    HIDDEN_APPS,
+    CONTROL_CENTER,
+    QUICK_NOTES,
+    ONBOARDING
 }
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
     private val preferencesManager = PreferencesManager(application)
     val appRepository = AppRepository(application)
+    val systemManager = SystemManager(application)
 
     val preferences: StateFlow<LauncherPreferences> = preferencesManager.preferencesFlow
         .stateIn(
@@ -37,6 +45,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _rawInstalledApps = MutableStateFlow<List<AppInfo>>(emptyList())
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
+
+    val mathResult: StateFlow<String?> = _searchQuery.map { query ->
+        MathEvaluator.evaluate(query)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _currentScreen = MutableStateFlow(Screen.HOME)
     val currentScreen: StateFlow<Screen> = _currentScreen
@@ -85,9 +97,23 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             loadApps()
         }
         viewModelScope.launch {
-            preferences.collect {
+            preferences.collect { prefs ->
                 loadApps()
             }
+        }
+    }
+
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            preferencesManager.setFirstLaunchCompleted(true)
+            _currentScreen.value = Screen.HOME
+        }
+    }
+
+    fun restartOnboarding() {
+        viewModelScope.launch {
+            preferencesManager.setFirstLaunchCompleted(false)
+            _currentScreen.value = Screen.ONBOARDING
         }
     }
 
@@ -158,14 +184,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { preferencesManager.setClock24Hour(enabled) }
     }
 
+    fun setClockStyle(style: ClockStyle) {
+        viewModelScope.launch { preferencesManager.setClockStyle(style) }
+    }
+
+    fun saveQuickNotes(notes: String) {
+        viewModelScope.launch { preferencesManager.saveQuickNotes(notes) }
+    }
+
     fun handleBackPressed(): Boolean {
         return when (_currentScreen.value) {
-            Screen.DRAWER, Screen.SETTINGS, Screen.HIDDEN_APPS -> {
+            Screen.DRAWER, Screen.SETTINGS, Screen.HIDDEN_APPS, Screen.CONTROL_CENTER, Screen.QUICK_NOTES -> {
                 _currentScreen.value = Screen.HOME
                 _searchQuery.value = ""
                 true
             }
-            Screen.HOME -> false
+            Screen.ONBOARDING, Screen.HOME -> false
         }
     }
 

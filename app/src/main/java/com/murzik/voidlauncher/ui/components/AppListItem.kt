@@ -1,9 +1,13 @@
 package com.murzik.voidlauncher.ui.components
 
 import android.graphics.Bitmap
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,9 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -36,6 +42,15 @@ fun AppListItem(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    // Smooth bouncy spring scale animation (scales down to 0.95 on tap, springs back to 1.0)
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 400f),
+        label = "AppItemScale"
+    )
 
     val iconBitmap = remember(app.icon, textOnlyMode) {
         if (!textOnlyMode && app.icon != null) {
@@ -52,7 +67,10 @@ fun AppListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .scale(scale)
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null, // Custom spring animation replaces generic box ripple
                 onClick = {
                     if (hapticEnabled) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
