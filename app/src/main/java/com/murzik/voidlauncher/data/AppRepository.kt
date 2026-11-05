@@ -20,6 +20,7 @@ class AppRepository(private val context: Context) {
     suspend fun loadInstalledApps(
         pinnedIds: Set<String>,
         hiddenIds: Set<String>,
+        customLabels: Map<String, String> = emptyMap(),
         loadIcons: Boolean = false
     ): List<AppInfo> = withContext(Dispatchers.IO) {
         val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
@@ -36,20 +37,23 @@ class AppRepository(private val context: Context) {
                 val packageName = resolveInfo.activityInfo.packageName
                 val activityName = resolveInfo.activityInfo.name
                 val id = "$packageName/$activityName"
-                val name = resolveInfo.loadLabel(packageManager).toString()
+                val rawName = resolveInfo.loadLabel(packageManager).toString()
+                val customLabel = customLabels[id]
+                val effectiveName = customLabel ?: rawName
                 val icon = if (loadIcons) resolveInfo.loadIcon(packageManager) else null
 
                 AppInfo(
-                    name = name,
+                    name = rawName,
                     packageName = packageName,
                     activityName = activityName,
-                    nameLower = name.lowercase(),
+                    customLabel = customLabel,
+                    nameLower = effectiveName.lowercase(),
                     icon = icon,
                     isPinned = pinnedIds.contains(id),
                     isHidden = hiddenIds.contains(id)
                 )
             }
-            .sortedBy { it.nameLower }
+            .sortedBy { it.displayName.lowercase() }
             .toList()
     }
 
@@ -106,9 +110,7 @@ class AppRepository(private val context: Context) {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(intent)
-        } catch (_: Exception) {
-            // Clock app fallback
-        }
+        } catch (_: Exception) {}
     }
 
     fun openCalendarApp() {
@@ -118,9 +120,7 @@ class AppRepository(private val context: Context) {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(intent)
-        } catch (_: Exception) {
-            // Calendar fallback
-        }
+        } catch (_: Exception) {}
     }
 
     fun expandNotificationShade() {
@@ -129,8 +129,6 @@ class AppRepository(private val context: Context) {
             val statusBarManagerClass = Class.forName("android.app.StatusBarManager")
             val expandNotifications: Method = statusBarManagerClass.getMethod("expandNotificationsPanel")
             expandNotifications.invoke(statusBarService)
-        } catch (_: Exception) {
-            // Status bar fallback
-        }
+        } catch (_: Exception) {}
     }
 }

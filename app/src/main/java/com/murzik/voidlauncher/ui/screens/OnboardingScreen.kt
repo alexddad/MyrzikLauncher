@@ -203,7 +203,7 @@ private fun StepWelcome() {
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = "Минималистичная системная оболочка нового поколения, созданная специально для вашего Xiaomi 17T.",
+            text = "Простая и быстрая системная оболочка для вашего Xiaomi 17T.",
             fontSize = 15.sp,
             lineHeight = 22.sp,
             textAlign = TextAlign.Center,
@@ -214,8 +214,8 @@ private fun StepWelcome() {
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "⚡ Мгновенная скорость • 🔋 AMOLED Энергосбережение • 🧘 Цифровой фокус",
-            fontSize = 12.sp,
+            text = "Высокая производительность • Экономия заряда • Ничего лишнего",
+            fontSize = 13.sp,
             textAlign = TextAlign.Center,
             color = VoidTextDisabled
         )

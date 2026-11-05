@@ -55,6 +55,7 @@ import com.murzik.voidlauncher.ui.theme.VoidBorder
 import com.murzik.voidlauncher.ui.theme.VoidCardSurface
 import com.murzik.voidlauncher.ui.theme.VoidTextPrimary
 import com.murzik.voidlauncher.ui.theme.VoidTextSecondary
+import com.murzik.voidlauncher.ui.theme.liquidGlass
 
 @Composable
 fun AppDrawerScreen(
@@ -158,14 +159,17 @@ fun AppDrawerScreen(
 
         HorizontalDivider(color = VoidBorder)
 
-        // Instant Built-in Calculator Card
+        // Instant Built-in Calculator Card with Liquid Glass
         mathResult?.let { result ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(VoidCardSurface)
+                    .liquidGlass(
+                        themeMode = preferences.themeMode,
+                        shape = RoundedCornerShape(16.dp),
+                        alpha = 0.18f
+                    )
                     .clickable { viewModel.onSearchQueryChanged(result) }
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically

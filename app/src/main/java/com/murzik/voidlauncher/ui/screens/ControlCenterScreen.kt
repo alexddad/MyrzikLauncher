@@ -29,6 +29,8 @@ import androidx.compose.material.icons.outlined.BatteryFull
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.FlashlightOff
 import androidx.compose.material.icons.outlined.FlashlightOn
+import androidx.compose.material.icons.outlined.Calculate
+import androidx.compose.material.icons.outlined.SdStorage
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Wifi
@@ -55,12 +57,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.murzik.voidlauncher.ui.LauncherViewModel
 import com.murzik.voidlauncher.ui.Screen
+import com.murzik.voidlauncher.ui.theme.ThemeMode
 import com.murzik.voidlauncher.ui.theme.VoidBlack
 import com.murzik.voidlauncher.ui.theme.VoidBorder
 import com.murzik.voidlauncher.ui.theme.VoidCardSurface
 import com.murzik.voidlauncher.ui.theme.VoidDarkSurface
 import com.murzik.voidlauncher.ui.theme.VoidTextPrimary
 import com.murzik.voidlauncher.ui.theme.VoidTextSecondary
+import com.murzik.voidlauncher.ui.theme.liquidGlass
 
 @Composable
 fun ControlCenterScreen(
@@ -69,6 +73,7 @@ fun ControlCenterScreen(
 ) {
     val isFlashlightOn by viewModel.systemManager.isFlashlightOn.collectAsState()
     val batteryStatus by viewModel.systemManager.batteryStatus.collectAsState()
+    val preferences by viewModel.preferences.collectAsState()
 
     val maxVol = remember { viewModel.systemManager.getMaxMediaVolume() }
     var currentVol by remember {
@@ -117,8 +122,11 @@ fun ControlCenterScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(VoidCardSurface)
+                    .liquidGlass(
+                        themeMode = preferences.themeMode,
+                        shape = RoundedCornerShape(20.dp),
+                        alpha = 0.16f
+                    )
                     .clickable { viewModel.systemManager.openBatterySettings() }
                     .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -150,6 +158,32 @@ fun ControlCenterScreen(
                     fontSize = 13.sp,
                     color = VoidTextSecondary
                 )
+            }
+
+            // Media Player Widget
+            val mediaState by viewModel.systemManager.mediaState.collectAsState()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        themeMode = preferences.themeMode,
+                        shape = RoundedCornerShape(18.dp),
+                        alpha = 0.14f
+                    )
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Text(text = "🎵", fontSize = 24.sp, modifier = Modifier.padding(end = 12.dp))
+                    Column {
+                        Text(text = mediaState.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = VoidTextPrimary)
+                        Text(text = if (mediaState.isPlaying) "Воспроизведение • Xiaomi 17T" else "На паузе", fontSize = 11.sp, color = VoidTextSecondary)
+                    }
+                }
+                IconButton(onClick = { viewModel.systemManager.toggleMediaPlayback() }) {
+                    Text(text = if (mediaState.isPlaying) "⏸" else "▶", fontSize = 20.sp, color = VoidTextPrimary)
+                }
             }
 
             // Quick Tiles Grid (2x2) with Spring Animations
@@ -203,8 +237,11 @@ fun ControlCenterScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(VoidCardSurface)
+                    .liquidGlass(
+                        themeMode = preferences.themeMode,
+                        shape = RoundedCornerShape(20.dp),
+                        alpha = 0.16f
+                    )
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 Row(
@@ -247,6 +284,30 @@ fun ControlCenterScreen(
                         inactiveTrackColor = VoidDarkSurface
                     ),
                     modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            // System Tools Row (Calculator & Storage)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                QuickTile(
+                    title = "Калькулятор",
+                    subtitle = "Системный",
+                    icon = Icons.Outlined.Calculate,
+                    isActive = false,
+                    onClick = { viewModel.navigateTo(Screen.CALCULATOR) },
+                    modifier = Modifier.weight(1f)
+                )
+
+                QuickTile(
+                    title = "Память",
+                    subtitle = "Хранилище",
+                    icon = Icons.Outlined.SdStorage,
+                    isActive = false,
+                    onClick = { viewModel.navigateTo(Screen.STORAGE_MANAGER) },
+                    modifier = Modifier.weight(1f)
                 )
             }
 
@@ -325,8 +386,11 @@ private fun QuickTile(
     Column(
         modifier = modifier
             .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
-            .background(bgColor)
+            .liquidGlass(
+                themeMode = ThemeMode.LIQUID_GLASS,
+                shape = RoundedCornerShape(18.dp),
+                alpha = if (isActive) 0.95f else 0.12f
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

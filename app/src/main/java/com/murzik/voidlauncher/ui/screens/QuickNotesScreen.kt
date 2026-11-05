@@ -35,7 +35,9 @@ import com.murzik.voidlauncher.ui.Screen
 import com.murzik.voidlauncher.ui.theme.VoidBlack
 import com.murzik.voidlauncher.ui.theme.VoidBorder
 import com.murzik.voidlauncher.ui.theme.VoidTextPrimary
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.murzik.voidlauncher.ui.theme.VoidTextSecondary
+import com.murzik.voidlauncher.ui.theme.liquidGlass
 
 @Composable
 fun QuickNotesScreen(
@@ -84,11 +86,17 @@ fun QuickNotesScreen(
 
         HorizontalDivider(color = VoidBorder)
 
-        // Notes content editor
+        // Notes content editor in Liquid Glass canvas
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp)
+                .padding(18.dp)
+                .liquidGlass(
+                    themeMode = preferences.themeMode,
+                    shape = RoundedCornerShape(22.dp),
+                    alpha = 0.14f
+                )
+                .padding(20.dp)
         ) {
             if (noteText.isEmpty()) {
                 Text(

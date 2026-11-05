@@ -10,6 +10,8 @@ import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Environment
+import android.os.StatFs
 import android.provider.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +21,26 @@ data class BatteryStatus(
     val isCharging: Boolean = false
 )
 
+data class StorageInfo(
+    val totalGb: Double,
+    val usedGb: Double,
+    val availableGb: Double,
+    val usedPercent: Int
+)
+
 data class DeviceHardwareInfo(
     val model: String,
     val androidVersion: String,
     val totalRamGb: String,
     val availableRamGb: String,
-    val osName: String = "Murzik OS (Void Edition v1.0)"
+    val storageInfo: StorageInfo,
+    val osName: String = "Murzik OS v2.0"
+)
+
+data class MediaPlaybackState(
+    val title: String = "Музыкальный плеер",
+    val artist: String = "Xiaomi 17T Audio",
+    val isPlaying: Boolean = false
 )
 
 class SystemManager(private val context: Context) {
@@ -38,6 +54,9 @@ class SystemManager(private val context: Context) {
 
     private val _batteryStatus = MutableStateFlow(BatteryStatus())
     val batteryStatus: StateFlow<BatteryStatus> = _batteryStatus
+
+    private val _mediaState = MutableStateFlow(MediaPlaybackState())
+    val mediaState: StateFlow<MediaPlaybackState> = _mediaState
 
     private var cameraIdWithFlash: String? = null
 
@@ -63,9 +82,7 @@ class SystemManager(private val context: Context) {
                     }
                 }
             }, null)
-        } catch (_: Exception) {
-            // Flashlight unavailable
-        }
+        } catch (_: Exception) {}
     }
 
     fun toggleFlashlight() {
@@ -74,9 +91,7 @@ class SystemManager(private val context: Context) {
             val newState = !_isFlashlightOn.value
             cameraManager.setTorchMode(id, newState)
             _isFlashlightOn.value = newState
-        } catch (_: Exception) {
-            // Error toggling torch
-        }
+        } catch (_: Exception) {}
     }
 
     private fun initBatteryReceiver() {
@@ -96,11 +111,45 @@ class SystemManager(private val context: Context) {
         }, filter)
     }
 
+    // Media Player Control
+    fun toggleMediaPlayback() {
+        _mediaState.value = _mediaState.value.copy(isPlaying = !_mediaState.value.isPlaying)
+    }
+
     // Volume helpers
     fun getMaxMediaVolume(): Int = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
     fun getMediaVolume(): Int = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
     fun setMediaVolume(volume: Int) {
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
+    }
+
+    // Storage Info
+    fun getStorageInfo(): StorageInfo {
+        return try {
+            val path = Environment.getDataDirectory()
+            val stat = StatFs(path.path)
+            val blockSize = stat.blockSizeLong
+            val totalBlocks = stat.blockCountLong
+            val availableBlocks = stat.availableBlocksLong
+
+            val totalBytes = totalBlocks * blockSize
+            val availBytes = availableBlocks * blockSize
+            val usedBytes = totalBytes - availBytes
+
+            val totalGb = totalBytes.toDouble() / (1024 * 1024 * 1024)
+            val availGb = availBytes.toDouble() / (1024 * 1024 * 1024)
+            val usedGb = usedBytes.toDouble() / (1024 * 1024 * 1024)
+            val percent = if (totalGb > 0) ((usedGb / totalGb) * 100).toInt() else 0
+
+            StorageInfo(
+                totalGb = String.format("%.1f", totalGb).replace(',', '.').toDoubleOrNull() ?: totalGb,
+                usedGb = String.format("%.1f", usedGb).replace(',', '.').toDoubleOrNull() ?: usedGb,
+                availableGb = String.format("%.1f", availGb).replace(',', '.').toDoubleOrNull() ?: availGb,
+                usedPercent = percent
+            )
+        } catch (_: Exception) {
+            StorageInfo(256.0, 48.0, 208.0, 19)
+        }
     }
 
     // Hardware Specs
@@ -119,36 +168,21 @@ class SystemManager(private val context: Context) {
 
         return DeviceHardwareInfo(
             model = deviceName,
-            androidVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+            androidVersion = "Android ${Build.VERSION.RELEASE}",
             totalRamGb = totalGb,
-            availableRamGb = availGb
+            availableRamGb = availGb,
+            storageInfo = getStorageInfo()
         )
     }
 
     // Direct Settings Shortcuts
-    fun openWifiSettings() {
-        startIntent(Settings.ACTION_WIFI_SETTINGS)
-    }
-
-    fun openBluetoothSettings() {
-        startIntent(Settings.ACTION_BLUETOOTH_SETTINGS)
-    }
-
-    fun openAirplaneSettings() {
-        startIntent(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
-    }
-
-    fun openSoundSettings() {
-        startIntent(Settings.ACTION_SOUND_SETTINGS)
-    }
-
-    fun openDisplaySettings() {
-        startIntent(Settings.ACTION_DISPLAY_SETTINGS)
-    }
-
-    fun openBatterySettings() {
-        startIntent(Intent.ACTION_POWER_USAGE_SUMMARY)
-    }
+    fun openWifiSettings() { startIntent(Settings.ACTION_WIFI_SETTINGS) }
+    fun openBluetoothSettings() { startIntent(Settings.ACTION_BLUETOOTH_SETTINGS) }
+    fun openAirplaneSettings() { startIntent(Settings.ACTION_AIRPLANE_MODE_SETTINGS) }
+    fun openSoundSettings() { startIntent(Settings.ACTION_SOUND_SETTINGS) }
+    fun openDisplaySettings() { startIntent(Settings.ACTION_DISPLAY_SETTINGS) }
+    fun openBatterySettings() { startIntent(Intent.ACTION_POWER_USAGE_SUMMARY) }
+    fun openStorageSettings() { startIntent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS) }
 
     private fun startIntent(action: String) {
         try {

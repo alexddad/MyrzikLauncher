@@ -99,7 +99,7 @@ fun AppListItem(
         }
 
         Text(
-            text = app.name,
+            text = app.displayName,
             fontSize = 18.sp,
             fontWeight = FontWeight.Normal,
             letterSpacing = 0.2.sp,
